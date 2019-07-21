@@ -1,0 +1,55 @@
+kind: Project
+name: local-kube-pydev-services
+environments:
+  - name: local
+    providers:
+      - name: local-kubernetes
+
+---
+
+kind: Module
+description: Backend Python Server
+name: python-backend
+type: container
+build:
+  targetImage: dev_image
+buildArgs:
+  python_version: python3
+services:
+  - name: python-backend
+    args: [/usr/local/bin/flask, run, --host=0.0.0.0]
+    ports:
+      - name: backend
+        containerPort: 5000
+    ingresses:
+      - path: /
+        port: backend
+    dependencies:
+      - migrate
+tasks:
+  - name: migrate
+    command: [/bin/sh, -c]
+    # The postgres health check appears to go through before the server accepts remote connections,
+    # so we set a long initial delay.
+    # https://github.com/CrunchyData/crunchy-containers/issues/653
+    args: ["sleep 15 && /usr/local/bin/flask db upgrade"]
+    description: Apply the Flask migrations to the DB
+    dependencies:
+      - postgres
+---
+
+kind: Module
+description: Postgres database for storing voting results
+type: helm
+name: postgres
+chart: stable/postgresql
+version: 6.0.0
+serviceResource:
+  kind: StatefulSet
+  name: postgres
+values:
+  # This is a more digestable name than the default one in the template
+  fullnameOverride: postgres
+  # This should of course not be used in production
+  postgresqlPassword: docker
+  postgresqlDatabase: wordcount_dev

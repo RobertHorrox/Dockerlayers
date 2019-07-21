@@ -1,0 +1,68 @@
+# syntax=docker/dockerfile:1.0.0-experimental
+FROM registry.hub.docker.com/library/centos:7.6.1810 as baseos
+
+
+# http://bugs.python.org/issue19846
+# > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
+ENV LANG C.UTF-8
+
+RUN yum -y update
+
+
+# Build Python
+FROM registry.hub.docker.com/centos/devtoolset-7-toolchain-centos7:7 as build_python
+ARG PYTHON_3_VERSION=3.7.4
+ARG PYTHON_2_VERSION=2.7.16
+
+USER 0
+RUN yum install -y --setopt=tsflags=nodocs openssl-devel uuid-devel tk-devel libffi-dev && yum clean all -y
+USER 1001
+
+ADD --chown  https://www.python.org/static/files/pubkeys.txt pubkeys.txt
+ADD https://www.python.org/ftp/python/${PYTHON_3_VERSION}/Python-${PYTHON_3_VERSION}.tar.xz python-3.tar.xz
+ADD https://www.python.org/ftp/python/${PYTHON_3_VERSION}/Python-${PYTHON_3_VERSION}.tar.xz.asc python-3.tar.xz.asc
+ADD https://www.python.org/ftp/python/${PYTHON_2_VERSION}/Python-${PYTHON_2_VERSION}.tar.xz python-2.tar.xz
+ADD https://www.python.org/ftp/python/${PYTHON_2_VERSION}/Python-${PYTHON_2_VERSION}.tar.xz.asc python-2.tar.xz.asc
+
+RUN ls -la
+RUN gpg --import pubkeys.txt
+RUN gpg --batch --verify python-3.tar.xz.asc python-3.tar.xz
+RUN gpg --batch --verify python-2.tar.xz.asc python-2.tar.xz
+
+RUN mkdir /opt/app-root/src/py3 && tar xJC /opt/app-root/src/py3  --strip-components=1 -f python-3.tar.xz
+RUN ./configure --enable-loadable-sqlite-extensions --enable-optimizations --enable-shared --with-system-expat --with-system-ffi --without-ensurepip
+RUN make -j "$(nproc)" PROFILE_TASK='-m test.regrtest --pgo \
+            test_array \
+            test_base64 \
+            test_binascii \
+            test_binhex \
+            test_binop \
+            test_bytes \
+            test_c_locale_coercion \
+            test_class \
+            test_cmath \
+            test_codecs \
+            test_compile \
+            test_complex \
+            test_csv \
+            test_decimal \
+            test_dict \
+            test_float \
+            test_fstring \
+            test_hashlib \
+            test_io \
+            test_iter \
+            test_json \
+            test_long \
+            test_math \
+            test_memoryview \
+            test_pickle \
+            test_re \
+            test_set \
+            test_slice \
+            test_struct \
+            test_threading \
+            test_time \
+            test_traceback \
+            test_unicode'
+
