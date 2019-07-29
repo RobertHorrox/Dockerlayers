@@ -38,4 +38,4 @@ USER pyapp
 ADD --chown=pyapp:pyapp . .
 ADD . .
 ENV FLASK_APP=web.py
-CMD ["/usr/local/bin/flask", "run", "--host=0.0.0.0"]
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0"]

@@ -31,3 +31,10 @@ def hello_world():
     db.session.add(u)
     db.session.commit()
     return User.query.all()[0].__repr__()
+
+@app.route('/live')
+def live():
+    return ""
+@app.route('/ready')
+def ready():
+    return ""

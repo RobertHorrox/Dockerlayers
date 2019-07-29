@@ -1,0 +1,25 @@
+apiVersion: skaffold/v1beta13
+kind: Config
+build:
+  tagPolicy:
+    envTemplate:
+      template: "{{.IMAGE_NAME}}:latest"
+  artifacts:
+  - image: pythonbackend
+  local: {}
+deploy:
+  helm:
+    releases:
+    - name: postgres
+      chartPath: stable/postgresql
+      version: 6.0.0
+      remote: true
+      values:
+        # This is a more digestable name than the default one in the template
+        fullnameOverride: postgres
+        # This should of course not be used in production
+        postgresqlPassword: docker
+        postgresqlDatabase: wordcount_dev
+    - name: pythonbackend
+      chartPath: backendpy
+      recreatePods: true
